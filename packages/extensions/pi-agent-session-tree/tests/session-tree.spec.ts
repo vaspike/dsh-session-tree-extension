@@ -912,6 +912,9 @@ describe('stock Harness Session compatibility (no harness.patch)', () => {
     expect((cursorEvent as unknown as { surfaceOp?: unknown } | undefined)?.surfaceOp).toEqual({ op: 'replace', startSeq: 0, endSeq: 1 })
     expect((cursorEvent as unknown as { sourceEventSeqs?: number[] } | undefined)?.sourceEventSeqs).toEqual([0, 1])
     expect((cursorEvent?.data as Record<string, unknown>).treeRestore).toEqual({ kind: 'cursor', nodeId: root.nodeId })
+    const cursorData = cursorEvent?.data as { turn?: unknown; step?: unknown }
+    expect(cursorData.turn).toBeGreaterThan(0)
+    expect(cursorData.step).toBeGreaterThan(0)
 
     tree.jump(second.nodeId)
     applyTreeCursorToSession(agent, tree)

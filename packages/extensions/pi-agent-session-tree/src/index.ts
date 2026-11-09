@@ -416,6 +416,23 @@ function selectedSurfaceSeqs(tree: SessionTree, session: Session): number[] {
   return seqs
 }
 
+/**
+ * Format v4 requires `system/message` turn and step to be positive. Prefer the
+ * latest committed turn and step so the marker stays inside an existing turn.
+ */
+function stockCursorPosition(session: Session): { turn: number; step: number } {
+  let turn = 1
+  let step = 1
+  for (const event of sessionEvents(session)) {
+    const data = event.data as { turn?: unknown; step?: unknown }
+    if (event.type === 'turn/start' && typeof data.turn === 'number' && data.turn > 0) turn = data.turn
+    if ((event.type === 'step/start' || event.type === 'turn/start') && typeof data.step === 'number' && data.step > 0) {
+      step = data.step
+    }
+  }
+  return { turn, step }
+}
+
 /** Append the official replacement event that invalidates the stock deriveMessages cache. */
 function appendStockCursorEvent(
   session: Session,
@@ -424,9 +441,12 @@ function appendStockCursorEvent(
 ): SessionEvent<'system/message'> | undefined {
   if (logSurfaceNodes.length === 0) return undefined
   const marker = { kind: 'cursor' as const, nodeId: tree.cursor }
+  // Format v4 rejects turn/step 0. Anchor the marker to the latest real
+  // turn when the log has one; otherwise use 1 so the append can persist.
+  const position = stockCursorPosition(session)
   const data = {
-    turn: 0,
-    step: 0,
+    turn: position.turn,
+    step: position.step,
     message: {
       role: 'system' as const,
       content: [],

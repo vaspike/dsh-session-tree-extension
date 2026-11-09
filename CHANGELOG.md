@@ -1,5 +1,9 @@
 ## 0.7.3 — 2026-11-09
 
+### Fixed
+
+- Stock-mode cursor markers no longer write `system/message` with `turn: 0` / `step: 0`. Format v4 rejects that and fails the turn with `system/message turn must be positive`. The marker now uses the latest positive turn and step, or 1 when the log has none.
+
 ### Changed
 
 - Declare `engines.dsh` as `>=0.2.1-rc.2 <0.2.2 || >=0.2.2-rc.1 <0.3.0` and widen Cordis peers to `^4.0.5 || ^4.1.0`, so a DeepSeek Harness `0.2.2-rc.1` desktop (Cordis 4.1.0) accepts the plugin.
