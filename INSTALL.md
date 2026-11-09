@@ -47,9 +47,10 @@ tree. `session_tree`'s `context`/`session` operations report the active
 
 ### Requirements
 
-- DeepSeek-Harness `^0.2.1-rc.2` and Cordis `~4.0.5`. The current development
-  and verification baseline is published `0.2.1-rc.5`; earlier releases were
-  also verified against `0.2.1-rc.2` and `0.2.1-rc.3`.
+- DeepSeek-Harness `0.2.1-rc.2` through `0.2.2-rc.1` (Cordis 4.0.5 or 4.1.0).
+  `0.7.3` is typechecked against the installed desktop runtime `0.2.2-rc.1`.
+  Earlier `0.7.2` releases were verified against `0.2.1-rc.2`, `0.2.1-rc.3`,
+  and `0.2.1-rc.5`.
 - Node.js 22 or newer.
 - No `allowBuilds` entries: the packages declare no lifecycle scripts and ship
   prebuilt artifacts.

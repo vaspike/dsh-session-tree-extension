@@ -1,3 +1,15 @@
+## 0.7.3 — 2026-11-09
+
+### Changed
+
+- Declare `engines.dsh` as `>=0.2.1-rc.2 <0.2.2 || >=0.2.2-rc.1 <0.3.0` and widen Cordis peers to `^4.0.5 || ^4.1.0`, so a DeepSeek Harness `0.2.2-rc.1` desktop (Cordis 4.1.0) accepts the plugin.
+- The repository root is now an installable bundle: it depends on the three implementation packages, so `dsh plugin add` of this checkout no longer enables an empty workspace package.
+
+### Verified
+
+- Host and client `tsc` pass against the published `@deepseek-ai/*@0.2.2-rc.1` packages and Cordis `4.1.0`. No session, tool, or client API changes were required.
+- Host tests load `sessionProjections` before `AgentRegistry` and install a tool executor, both required by 0.2.2 before those services start.
+
 ## 0.7.2 — 2026-11-03
 
 ### Changed

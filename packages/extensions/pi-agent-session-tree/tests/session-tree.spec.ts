@@ -12,6 +12,7 @@ import { join } from 'node:path'
 import { Context } from '@deepseek-ai/cordis'
 import type { Agent, AgentStatus } from '@deepseek-ai/dsh-agent'
 import AgentRegistry from '@deepseek-ai/dsh-agent'
+import SessionProjectionRegistry from '@deepseek-ai/dsh-session-projection'
 import { ToolCallId } from '@deepseek-ai/dsh-llm'
 import type { ToolExecutionResult } from '@deepseek-ai/dsh-tools'
 import ToolRuntime from '@deepseek-ai/dsh-tools'
@@ -75,10 +76,34 @@ function stubAgent(rawId: string, cwd?: string): Agent {
 /** Mount the plugin under a real Cordis context with its service deps. */
 async function harness() {
   const ctx = new Context()
+  // 0.2.2 AgentRegistry waits on sessionProjections, and tool calls wait on an executor.
+  await ctx.plugin(SessionProjectionRegistry)
   await ctx.plugin(SystemPrompt)
   await ctx.plugin(AgentRegistry)
   await ctx.plugin(ToolRuntime)
   await ctx.plugin(CommandRuntime)
+  ctx.tools.setExecutor({
+    describe: () => ({ schemas: [], knownNames: [] }),
+    async execute(input) {
+      const call = 'calls' in input && Array.isArray(input.calls) ? input.calls[0] : input
+      const name = call && typeof call === 'object' && 'name' in call ? String(call.name) : ''
+      const tool = ctx.tools.get(name)
+      if (tool === undefined) throw new Error(`tool '${name}' is not registered`)
+      const args = call && typeof call === 'object' && 'arguments' in call ? call.arguments : {}
+      const callId = call && typeof call === 'object' && 'callId' in call ? call.callId : ToolCallId('call-test')
+      const agent = 'agent' in input ? input.agent : undefined
+      const value = await tool.execute(args, {
+        agent,
+        signal: testToolSignal,
+        callId,
+        rootCallId: callId,
+        token: {} as never,
+        deferContext: () => {},
+        concludeTurn: () => {},
+      })
+      return { isError: false, content: [{ type: 'text', text: JSON.stringify(value) }], value }
+    },
+  })
   const serviceFiber = await ctx.plugin(SessionTreeService)
   const fiber = await ctx.plugin(toolSessionTree)
   return { ctx, fiber, serviceFiber, service: ctx.sessionTree }

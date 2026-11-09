@@ -3,7 +3,7 @@
 [![npm](https://img.shields.io/npm/v/@robiteame/dsh-session-tree)](https://www.npmjs.com/package/@robiteame/dsh-session-tree)
 [![CI](https://github.com/robiteame/dsh-session-tree-extension/actions/workflows/ci.yml/badge.svg)](https://github.com/robiteame/dsh-session-tree-extension/actions/workflows/ci.yml)
 [![license](https://img.shields.io/badge/license-MIT-blue)](./LICENSE)
-[![Harness](https://img.shields.io/badge/DeepSeek--Harness-0.2.1--rc.5-orange)](https://github.com/deepseek-ai/deepseek-harness)
+[![Harness](https://img.shields.io/badge/DeepSeek--Harness-0.2.2--rc.1-orange)](https://github.com/deepseek-ai/deepseek-harness)
 
 Append-only, multi-branch conversation trees for
 [DeepSeek-Harness](https://github.com/deepseek-ai/deepseek-harness) — fork any
@@ -75,10 +75,10 @@ After installing, restart the profile. Verify the composed layer:
 dsh --profile <profile> --dump-config   # should list the three session-tree rows
 ```
 
-Requires DeepSeek-Harness `^0.2.1-rc.2` and Cordis `~4.0.5`; the target
-installation provides those peers. The current development and verification
-baseline is the published `0.2.1-rc.5` release. No install
-scripts run — the tarballs ship prebuilt `lib/` artifacts.
+Requires DeepSeek-Harness `0.2.1-rc.2` through `0.2.2-rc.1` and Cordis
+`^4.0.5 || ^4.1.0`; the target installation provides those peers. `0.7.3` is
+typechecked against desktop `0.2.2-rc.1`. No install scripts run — the
+tarballs ship prebuilt `lib/` artifacts.
 
 ## The three commands
 
