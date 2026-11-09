@@ -355,6 +355,26 @@ function registerSessionTreeUi(ctx: ClientContext): void {
     inject: () => ({
       lineage: forkLineage,
       openSession: (sessionId: SessionId) => { revealSession(ctx, sessionId) },
+      actions: {
+        rename: async (sessionId: SessionId, title: string) => {
+          const result = await ctx.sessions.using(
+            sessionId,
+            { source: 'controllerOperation' },
+            reference => reference.binding.session.rename(title),
+          )
+          if (!result.ok) throw new Error(result.error.message)
+          const existing = forkLineage.getSnapshot().get(sessionId)
+          if (existing !== undefined) forkLineage.record({ ...existing, summary: title })
+        },
+        archive: async (sessionId: SessionId, options?: { stopActivity?: boolean }) => {
+          const workspaces = ctx.get('workspaces') as {
+            archiveSession(id: SessionId, archiveOptions?: { stopActivity?: boolean }): Promise<void>
+          } | undefined
+          if (workspaces === undefined) throw new Error('workspace archive is unavailable')
+          await workspaces.archiveSession(sessionId, options)
+          forkLineage.forget(sessionId)
+        },
+      },
     }),
   }, SessionBranchList))
 

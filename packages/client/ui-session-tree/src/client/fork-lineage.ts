@@ -92,6 +92,16 @@ export class SessionForkLineage {
     return entry
   }
 
+  /** Drop one `/fork` annotation so its native session row is shown again. */
+  forget(childId: SessionId): void {
+    if (!this.snapshot.has(childId)) return
+    const next = new Map(this.snapshot)
+    next.delete(childId)
+    this.snapshot = next
+    this.persist()
+    for (const listener of this.listeners) listener()
+  }
+
   /** Drop all annotations (test/teardown face; display is re-derived from state). */
   clear(): void {
     if (this.snapshot.size === 0) return

@@ -3,6 +3,7 @@
 ### Fixed
 
 - Stock-mode cursor markers no longer write `system/message` with `turn: 0` / `step: 0`. Format v4 rejects that and fails the turn with `system/message turn must be positive`. The marker now uses the latest positive turn and step, or 1 when the log has none.
+- Fork rows in the sidebar can rename and archive. The native row stays hidden, and these actions call the official session rename and workspace archive APIs. A running session asks for a second click to stop and archive.
 
 ### Changed
 

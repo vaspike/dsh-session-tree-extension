@@ -32,6 +32,19 @@ describe('session fork lineage store', () => {
     expect(listener).toHaveBeenCalledTimes(1)
   })
 
+  it('forgets one child and leaves the rest', () => {
+    const storage = memoryStorage()
+    const lineage = new SessionForkLineage(storage)
+    lineage.record({ childId: sid('c1'), parentId: sid('s1'), summary: 'first' })
+    lineage.record({ childId: sid('c2'), parentId: sid('s1'), summary: 'second' })
+    lineage.forget(sid('c1'))
+    expect(lineage.getSnapshot().has(sid('c1'))).toBe(false)
+    expect(lineage.getSnapshot().get(sid('c2'))?.summary).toBe('second')
+    const restored = new SessionForkLineage(storage)
+    expect(restored.getSnapshot().has(sid('c1'))).toBe(false)
+    expect(restored.getSnapshot().has(sid('c2'))).toBe(true)
+  })
+
   it('persists records and restores them through a new store', () => {
     const storage = memoryStorage()
     const writer = new SessionForkLineage(storage)

@@ -240,21 +240,76 @@ function visibleRows(
   return visible
 }
 
+/** Official session commands the hidden native row can no longer expose. */
+export interface BranchSessionActions {
+  rename(sessionId: SessionId, title: string): Promise<void>
+  /** Rejects with `WorkspaceArchiveError` when the session is still running. */
+  archive(sessionId: SessionId, options?: { stopActivity?: boolean }): Promise<void>
+}
+
+function archiveNeedsStop(error: unknown): boolean {
+  if (!(error instanceof Error) || error.name !== 'WorkspaceArchiveError') return false
+  const code = (error as Error & { rpcError?: { code?: unknown } }).rpcError?.code
+  return code === 'workspace/session-active'
+}
+
 function BranchRowView({
   row,
   expanded,
   onToggle,
   onOpen,
+  actions,
   t,
 }: {
   row: BranchRow
   expanded: boolean
   onToggle: (sessionId: SessionId) => void
   onOpen: (sessionId: SessionId) => void
+  actions?: BranchSessionActions
   t: (key: SessionTreeKey) => string
 }) {
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState(row.title)
+  const [confirmStop, setConfirmStop] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | undefined>()
+  const saving = useRef(false)
   const classes = [css.row, row.current ? css.rowCurrent : undefined].filter(Boolean).join(' ')
   const toggleLabel = expanded ? t('node.collapse') : t('node.expand')
+  const saveTitle = (): void => {
+    if (saving.current) return
+    const title = draft.trim()
+    if (actions === undefined || title === '' || title === row.title) {
+      setEditing(false)
+      setDraft(row.title)
+      return
+    }
+    saving.current = true
+    setBusy(true)
+    setError(undefined)
+    void actions.rename(row.sessionId, title).then(() => {
+      setEditing(false)
+    }, (reason: unknown) => {
+      setError(reason instanceof Error ? reason.message : t('branch.node.renameFailed'))
+    }).finally(() => {
+      saving.current = false
+      setBusy(false)
+    })
+  }
+  const archive = (stopActivity: boolean): void => {
+    if (actions === undefined) return
+    setBusy(true)
+    setError(undefined)
+    void actions.archive(row.sessionId, stopActivity ? { stopActivity: true } : {}).then(() => {
+      setConfirmStop(false)
+    }, (reason: unknown) => {
+      if (!stopActivity && archiveNeedsStop(reason)) {
+        setConfirmStop(true)
+        return
+      }
+      setError(reason instanceof Error ? reason.message : t('branch.node.archiveFailed'))
+    }).finally(() => { setBusy(false) })
+  }
   return (
     <li
       className={classes}
@@ -316,6 +371,50 @@ function BranchRowView({
         </span>
         <span className={css.summary}>{row.title}</span>
       </button>
+      {actions === undefined ? null : editing ? (
+        <input
+          className={css.renameInput}
+          aria-label={t('branch.node.rename')}
+          value={draft}
+          disabled={busy}
+          autoFocus
+          onChange={event => { setDraft(event.target.value) }}
+          onKeyDown={event => {
+            if (event.key === 'Enter') saveTitle()
+            if (event.key === 'Escape') {
+              setDraft(row.title)
+              setEditing(false)
+            }
+          }}
+          onBlur={() => { saveTitle() }}
+        />
+      ) : (
+        <span className={css.actions}>
+          <button
+            type="button"
+            className={css.action}
+            disabled={busy}
+            aria-label={`${t('branch.node.rename')} - ${row.title}`}
+            onClick={() => {
+              setDraft(row.title)
+              setError(undefined)
+              setEditing(true)
+            }}
+          >
+            {t('branch.node.rename')}
+          </button>
+          <button
+            type="button"
+            className={css.action}
+            disabled={busy}
+            aria-label={`${confirmStop ? t('branch.node.archiveStop') : t('branch.node.archive')} - ${row.title}`}
+            onClick={() => { archive(confirmStop) }}
+          >
+            {confirmStop ? t('branch.node.archiveStop') : t('branch.node.archive')}
+          </button>
+        </span>
+      )}
+      {error === undefined ? null : <span className={css.rowError} role="alert">{error}</span>}
     </li>
   )
 }
@@ -326,6 +425,7 @@ function BranchMenu({
   collapsed,
   onToggle,
   onOpen,
+  actions,
   t,
 }: {
   group: BranchGroup
@@ -333,6 +433,7 @@ function BranchMenu({
   collapsed: ReadonlySet<SessionId>
   onToggle: (sessionId: SessionId) => void
   onOpen: (sessionId: SessionId) => void
+  actions?: BranchSessionActions
   t: (key: SessionTreeKey) => string
 }) {
   const toggleLabel = expanded ? t('branch.menu.collapse') : t('branch.menu.expand')
@@ -371,6 +472,7 @@ function BranchMenu({
           expanded={!collapsed.has(row.sessionId)}
           onToggle={onToggle}
           onOpen={onOpen}
+          {...actions === undefined ? {} : { actions }}
           t={t}
         />
       ))}
@@ -386,6 +488,8 @@ export type SessionBranchListProps =
     lineage: SessionForkLineage
     /** Open one Session through the official Session Controller. */
     openSession: (sessionId: SessionId) => void
+    /** Rename and archive for the rows whose native menus are hidden. */
+    actions?: BranchSessionActions
   }
 
 /**
@@ -396,6 +500,7 @@ export type SessionBranchListProps =
 export function SessionBranchList({
   lineage,
   openSession,
+  actions,
   useSessions,
   t,
 }: SessionBranchListProps) {
@@ -530,6 +635,7 @@ export function SessionBranchList({
             collapsed={collapsed}
             onToggle={toggle}
             onOpen={openSession}
+            {...actions === undefined ? {} : { actions }}
             t={t}
           />,
           host,
